@@ -41,7 +41,7 @@ import org.apache.zookeeper.txn.TxnHeader;
 /**
  * This class has the control logic for the Follower.
  */
-public class Follower extends Learner {                                                \* Follower继承Learner
+public class Follower extends Learner {                                                // Follower继承Learner
 
     private long lastQueued;
     // This is the same object as this.zk, but we cache the downcast op
