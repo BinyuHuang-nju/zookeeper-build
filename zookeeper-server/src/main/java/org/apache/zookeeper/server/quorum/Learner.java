@@ -483,7 +483,7 @@ public class Learner {
      * @return the zxid the Leader sends for synchronization purposes.
      * @throws IOException
      */
-    protected long registerWithLeader(int pktType) throws IOException {
+    protected long registerWithLeader(int pktType) throws IOException {                 
         /*
          * Send follower info, including last zxid and sid
          */
@@ -511,15 +511,15 @@ public class Learner {
             final ByteBuffer wrappedEpochBytes = ByteBuffer.wrap(epochBytes);
             if (newEpoch > self.getAcceptedEpoch()) {
                 wrappedEpochBytes.putInt((int) self.getCurrentEpoch());
-                self.setAcceptedEpoch(newEpoch);
+                self.setAcceptedEpoch(newEpoch);                                // 可以看到follower对LEADERINFO处理更新本地的acceptedEpoch
             } else if (newEpoch == self.getAcceptedEpoch()) {
                 // since we have already acked an epoch equal to the leaders, we cannot ack
                 // again, but we still need to send our lastZxid to the leader so that we can
                 // sync with it if it does assume leadership of the epoch.
                 // the -1 indicates that this reply should not count as an ack for the new epoch
                 wrappedEpochBytes.putInt(-1);
-            } else {
-                throw new IOException("Leaders epoch, "
+            } else {                                                            // 可以看到zookeeper认为follower收到epoch < acceptedEpoch的LEADERINFO是违法的
+                throw new IOException("Leaders epoch, "                         // 在技术手册中, 出现这种情况会使follower进入leader election
                                       + newEpoch
                                       + " is less than accepted epoch, "
                                       + self.getAcceptedEpoch());
