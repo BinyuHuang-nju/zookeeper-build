@@ -520,7 +520,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     }
 
-    public enum ServerState {
+    public enum ServerState {                                     // 将election抽象后，这里我们的spec可能会少到ServerState中的LOOKING和ZabState中的ELECTION
         LOOKING,
         FOLLOWING,
         LEADING,
@@ -542,7 +542,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
      * (Used for monitoring) When peer is in synchronization phase, this shows
      * which synchronization mechanism is being used
      */
-    public enum SyncMode {
+    public enum SyncMode {                                        // 这里我们可能不会具体实现SyncMode，用RECOVERY_SYNC进行leader和follower之间的同步
         NONE,
         DIFF,
         SNAP,
