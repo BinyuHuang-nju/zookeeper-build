@@ -41,7 +41,7 @@ import org.apache.zookeeper.txn.TxnHeader;
 /**
  * This class has the control logic for the Follower.
  */
-public class Follower extends Learner {
+public class Follower extends Learner {                                                \* Follower继承Learner
 
     private long lastQueued;
     // This is the same object as this.zk, but we cache the downcast op
@@ -82,9 +82,9 @@ public class Follower extends Learner {
         long connectionTime = 0;
         boolean completedSync = false;
 
-        try {
-            self.setZabState(QuorumPeer.ZabState.DISCOVERY);
-            QuorumServer leaderServer = findLeader();
+        try {      // 可以看到follower也是需要经历DISCOVERY->SYNC->BROADCAST的过程，然后completedSync = true后，开始broadcast阶段
+            self.setZabState(QuorumPeer.ZabState.DISCOVERY);     
+            QuorumServer leaderServer = findLeader();             
             try {
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 connectionTime = System.currentTimeMillis();
@@ -124,8 +124,8 @@ public class Follower extends Learner {
                 // create a reusable packet to reduce gc impact
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning()) {
-                    readPacket(qp);
-                    processPacket(qp);
+                    readPacket(qp);                                                  // 该函数在Learner类中定义，即往InputBuffer中加入qp
+                    processPacket(qp);                                               // 定义在下方，对各种类型的msg做处理
                 }
             } catch (Exception e) {
                 LOG.warn("Exception when following the leader", e);
@@ -157,6 +157,9 @@ public class Follower extends Learner {
      * @param qp
      * @throws IOException
      */
+    // follower在broadcast阶段处理msg的function。
+    // 由此可见,收到PROPOSAL, COMMIT是合理的，收到UPTODATE(COMMIT-LD)报错，
+    // 是否可以说，对于LEADERINFO(NEWEPOCH)和NEWLEADER这两种类型msg，follower在broadcast阶段是接收不到的？
     protected void processPacket(QuorumPacket qp) throws Exception {
         switch (qp.getType()) {
         case Leader.PING:
@@ -168,13 +171,13 @@ public class Follower extends Learner {
             TxnHeader hdr = logEntry.getHeader();
             Record txn = logEntry.getTxn();
             TxnDigest digest = logEntry.getDigest();
-            if (hdr.getZxid() != lastQueued + 1) {
-                LOG.warn(
+            if (hdr.getZxid() != lastQueued + 1) {                   // lastQueued应该是lastZxid(<e,c>)，希望保存的下一个transaction的zxid与lastQueued+1即<e,c+1>一致
+                LOG.warn(                                            // 否则warn
                     "Got zxid 0x{} expected 0x{}",
                     Long.toHexString(hdr.getZxid()),
                     Long.toHexString(lastQueued + 1));
             }
-            lastQueued = hdr.getZxid();
+            lastQueued = hdr.getZxid();                              // 更新lastZxid
 
             if (hdr.getType() == OpCode.reconfig) {
                 SetDataTxn setDataTxn = (SetDataTxn) txn;
@@ -182,7 +185,7 @@ public class Follower extends Learner {
                 self.setLastSeenQuorumVerifier(qv, true);
             }
 
-            fzk.logRequest(hdr, txn, digest);
+            fzk.logRequest(hdr, txn, digest);                        // 把transaction写入pendingTxns，应该代表这里未commit部分的history
             if (hdr != null) {
                 /*
                  * Request header is created only by the leader, so this is only set
@@ -203,8 +206,8 @@ public class Follower extends Learner {
             break;
         case Leader.COMMIT:
             ServerMetrics.getMetrics().LEARNER_COMMIT_RECEIVED_COUNT.add(1);
-            fzk.commit(qp.getZxid());
-            if (om != null) {
+            fzk.commit(qp.getZxid());                               // 将qp.getZxid()对应于pendingTxns中的transaction进行commit，并移除出pendingTxns
+            if (om != null) {                                       // 随后有个专门保存节点的committed数据的类叫commitProcessor将该transaction保存，加入committedRequests中
                 final long startTime = Time.currentElapsedTime();
                 om.proposalCommitted(qp.getZxid());
                 ServerMetrics.getMetrics().OM_COMMIT_PROCESS_TIME.add(Time.currentElapsedTime() - startTime);
@@ -232,7 +235,7 @@ public class Follower extends Learner {
                 throw new Exception("changes proposed in reconfig");
             }
             break;
-        case Leader.UPTODATE:
+        case Leader.UPTODATE:                                      // 处于broadcast阶段的follower收到UPTODATE(COMMIT-LD)会报错error
             LOG.error("Received an UPTODATE message after Follower started");
             break;
         case Leader.REVALIDATE:
@@ -240,13 +243,13 @@ public class Follower extends Learner {
                 revalidate(qp);
             }
             break;
-        case Leader.SYNC:
-            fzk.sync();
+        case Leader.SYNC:       //* This message is a reply to a synchronize command flushing the pipe between the leader and the follower.          
+            fzk.sync();         // 从pendingSyncs中取出r，调用commitProcessor.commit(r)将其commit (没太看明白这个SYNC)
             break;
         default:
             LOG.warn("Unknown packet type: {}", LearnerHandler.packetToString(qp));
             break;
-        }
+        }                      
     }
 
     /**
