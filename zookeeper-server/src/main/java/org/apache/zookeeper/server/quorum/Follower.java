@@ -122,8 +122,8 @@ public class Follower extends Learner {                                         
                     om = null;
                 }
                 // create a reusable packet to reduce gc impact
-                QuorumPacket qp = new QuorumPacket();
-                while (this.isRunning()) {
+                QuorumPacket qp = new QuorumPacket();    // 这里qp new出来即可，qp每次是在readPacket中改变的，readPacket中有leaderIs 即来自leader的inbuffer，会修改qp                         
+                while (this.isRunning()) { 
                     readPacket(qp);                                                  // 该函数在Learner类中定义，即往InputBuffer中加入qp
                     processPacket(qp);                                               // 定义在下方，对各种类型的msg做处理
                 }
