@@ -104,7 +104,7 @@ public class Follower extends Learner {                                         
                 }
                 long startTime = Time.currentElapsedTime();
                 try {
-                    self.setLeaderAddressAndId(leaderServer.addr, leaderServer.getId());
+                    self.setLeaderAddressAndId(leaderServer.addr, leaderServer.getId());            // 可以看到follower端有leaderId的信息
                     self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
                     syncWithLeader(newEpochZxid);
                     self.setZabState(QuorumPeer.ZabState.BROADCAST);
