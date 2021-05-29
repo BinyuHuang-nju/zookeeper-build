@@ -622,9 +622,9 @@ public class Learner {
             // but written out to the transaction log
             boolean writeToTxnLog = !snapshotNeeded;
             TxnLogEntry logEntry;
-            // we are now going to start getting transactions to apply followed by an UPTODATE
-            outerLoop:
-            while (self.isRunning()) {
+            // we are now going to start getting transactions to apply followed by an UPTODATE       // 这句注释说明，这些都是follower在SYNC阶段的动作，在该阶段也会收到COMMIT和PROPOSAL
+            outerLoop:                                                                               // 当接收到UPTODATE，代表SYNC阶段结束，即recovery完成，进入BROADCAST阶段
+            while (self.isRunning()) {          
                 readPacket(qp);
                 switch (qp.getType()) {
                 case Leader.PROPOSAL:
@@ -647,7 +647,7 @@ public class Learner {
                         self.setLastSeenQuorumVerifier(qv, true);
                     }
 
-                    packetsNotCommitted.add(pif);
+                    packetsNotCommitted.add(pif);                                                  //  PROPOSAL: 向packetsNotCommitted中加入一个transaction
                     break;
                 case Leader.COMMIT:
                 case Leader.COMMITANDACTIVATE:
@@ -670,10 +670,10 @@ public class Learner {
                                 Long.toHexString(pif.hdr.getZxid()));
                         } else {
                             zk.processTxn(pif.hdr, pif.rec);
-                            packetsNotCommitted.remove();
+                            packetsNotCommitted.remove();                                         // COMMIT: 向packetsNotCommitted中移出对应其中最初进入的transaction
                         }
                     } else {
-                        packetsCommitted.add(qp.getZxid());
+                        packetsCommitted.add(qp.getZxid());                                       //         再向packetsCommitted中加入该transaction的zxid代表已committed
                     }
                     break;
                 case Leader.INFORM:
@@ -731,7 +731,7 @@ public class Learner {
                     }
                     self.setZooKeeperServer(zk);
                     self.adminServer.setZooKeeperServer(zk);
-                    break outerLoop;
+                    break outerLoop;                                                                                // 接收到UPTODATE(COMMIT-LD)就跳出循环进入BROADCAST
                 case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery
                     // means this is Zab 1.0
                     LOG.info("Learner received NEWLEADER message");
@@ -749,7 +749,7 @@ public class Learner {
                         zk.takeSnapshot(syncSnapshot);
                     }
 
-                    self.setCurrentEpoch(newEpoch);
+                    self.setCurrentEpoch(newEpoch);                                                                // follower是在NEWLEADER中修改自己的currentEpoch的
                     writeToTxnLog = true;
                     //Anything after this needs to go to the transaction log, not applied directly in memory
                     isPreZAB1_0 = false;
@@ -763,7 +763,7 @@ public class Learner {
                         for (PacketInFlight p : packetsNotCommitted) {
                             fzk.logRequest(p.hdr, p.rec, p.digest);
                         }
-                        packetsNotCommitted.clear();
+                        packetsNotCommitted.clear();                                                    // 在我的思路中packetsNotCommitted清空应该是COMMIT-LD(UPTODATE)的事情，为什么在这里？
                     }
 
                     writePacket(new QuorumPacket(Leader.ACK, newLeaderZxid, null, null), true);
