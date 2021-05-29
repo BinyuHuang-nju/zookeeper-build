@@ -171,7 +171,7 @@ public class Leader extends LearnerMaster {
         return nonVotingFollowers;
     }
 
-    void addForwardingFollower(LearnerHandler lh) {
+    void addForwardingFollower(LearnerHandler lh) {                                           // forwardingFollowers应该是leader认为的跟随自己的集群，每次广播仅向该set内节点发送msg
         synchronized (forwardingFollowers) {
             forwardingFollowers.add(lh);
             /*
@@ -592,7 +592,7 @@ public class Leader extends LearnerMaster {
         zk.registerJMX(new LeaderBean(this, zk), self.jmxLocalPeerBean);
 
         try {
-            self.setZabState(QuorumPeer.ZabState.DISCOVERY);
+            self.setZabState(QuorumPeer.ZabState.DISCOVERY);                                                  // 从DISCOVERY阶段开始的Leader
             self.tick.set(0);
             zk.loadData();
 
@@ -602,8 +602,8 @@ public class Leader extends LearnerMaster {
             // new followers.
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
-
-            long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
+                                                                                     // 这里leader等待接收多数派的FOLLOWERINFO
+            long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());   // 1415 - leader收到多数派的FOLLOWERINFO(CEPOCH)后设置自己的acceptedEpoch作为新的epoch
 
             zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
 
@@ -649,23 +649,23 @@ public class Leader extends LearnerMaster {
                 }
             }
 
-            newLeaderProposal.addQuorumVerifier(self.getQuorumVerifier());
+            newLeaderProposal.addQuorumVerifier(self.getQuorumVerifier());                                    
             if (self.getLastSeenQuorumVerifier().getVersion() > self.getQuorumVerifier().getVersion()) {
                 newLeaderProposal.addQuorumVerifier(self.getLastSeenQuorumVerifier());
             }
 
             // We have to get at least a majority of servers in sync with
             // us. We do this by waiting for the NEWLEADER packet to get
-            // acknowledged
+            // acknowledged                                                                                   // (广播LEADERINFO(NEWEPOCH)的过程)
 
-            waitForEpochAck(self.getId(), leaderStateSummary);
-            self.setCurrentEpoch(epoch);
+            waitForEpochAck(self.getId(), leaderStateSummary);                                                // 1461 - 在这里等待接收多数派ACKECPOCH，其中判断up-to-date、epoch等信息
+            self.setCurrentEpoch(epoch);                                                                      // 随后将currentEpoch也置为该轮的epoch
             self.setLeaderAddressAndId(self.getQuorumAddress(), self.getId());
-            self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);
-
+            self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);                                            // 将状态由DISCOVERY转为SYNCHRONIZATION
+                                                                                                              // (广播(SYNC/TRUNC/DIFF)+NEWLEADER的过程)
             try {
-                waitForNewLeaderAck(self.getId(), zk.getZxid());
-            } catch (InterruptedException e) {
+                waitForNewLeaderAck(self.getId(), zk.getZxid());                                              // 1566 - leader等待接收多数派的ACK-LD，其中判断zxid等信息
+            } catch (InterruptedException e) {                                                                //        其中1590 - hasAllQuorums好像是接收到quorum中的每个follower
                 shutdown("Waiting for a quorum of followers, only synced with sids: [ "
                          + newLeaderProposal.ackSetsToString()
                          + " ]");
@@ -713,7 +713,7 @@ public class Leader extends LearnerMaster {
                 self.setZooKeeperServer(zk);
             }
 
-            self.setZabState(QuorumPeer.ZabState.BROADCAST);
+            self.setZabState(QuorumPeer.ZabState.BROADCAST);                                         // 设置leader状态为BROADCAST
             self.adminServer.setZooKeeperServer(zk);
 
             // We ping twice a tick, so we only update the tick every other
@@ -911,7 +911,8 @@ public class Leader extends LearnerMaster {
     /**
      * @return True if committed, otherwise false.
      **/
-    public synchronized boolean tryToCommit(Proposal p, long zxid, SocketAddress followerAddr) {
+    public synchronized boolean tryToCommit(Proposal p, long zxid, SocketAddress followerAddr) {           // 该函数被processAck调用，
+                                                                                                           // 因为收到多数派的某个transaction的ack才可对该transaction做commit
         // make sure that ops are committed in order. With reconfigurations it is now possible
         // that different operations wait for different sets of acks, and we still want to enforce
         // that they are committed in order. Currently we only permit one outstanding reconfiguration
@@ -939,10 +940,10 @@ public class Leader extends LearnerMaster {
             LOG.warn("First is 0x{}", Long.toHexString(lastCommitted + 1));
         }
 
-        outstandingProposals.remove(zxid);
-
+        outstandingProposals.remove(zxid);                                                 // 该zxid的transaction已是committed，就将其移出outstandingProposals
+                                                                                           // 1239 - 函数propose中是向outstandingProposals中加入一个元素
         if (p.request != null) {
-            toBeApplied.add(p);
+            toBeApplied.add(p);                                                            // 既然该transaction已committed，则它可被applied
         }
 
         if (p.request == null) {
@@ -973,12 +974,12 @@ public class Leader extends LearnerMaster {
             informAndActivate(p, designatedLeader);
         } else {
             p.request.logLatency(ServerMetrics.getMetrics().QUORUM_ACK_LATENCY);
-            commit(zxid);
+            commit(zxid);                                                                           // 这中间包含sendPacket(COMMIT)
             inform(p);
         }
         zk.commitProcessor.commit(p.request);
         if (pendingSyncs.containsKey(zxid)) {
-            for (LearnerSyncRequest r : pendingSyncs.remove(zxid)) {
+            for (LearnerSyncRequest r : pendingSyncs.remove(zxid)) {                                // 从pendingSyncs中remove某个zxid代表该zxid对应的transaction已committed
                 sendSync(r);
             }
         }
@@ -1136,7 +1137,7 @@ public class Leader extends LearnerMaster {
      * @param qp
      *                the packet to be sent
      */
-    void sendPacket(QuorumPacket qp) {
+    void sendPacket(QuorumPacket qp) {                                                  // 这里就可以看到sendPacket是对forwardingFollowers做广播，而不是对所有servers，区别于Raft
         synchronized (forwardingFollowers) {
             for (LearnerHandler f : forwardingFollowers) {
                 f.queuePacket(qp);
@@ -1412,7 +1413,7 @@ public class Leader extends LearnerMaster {
     }
 
     @Override
-    public long getEpochToPropose(long sid, long lastAcceptedEpoch) throws InterruptedException, IOException {
+    public long getEpochToPropose(long sid, long lastAcceptedEpoch) throws InterruptedException, IOException { 
         synchronized (connectingFollowers) {
             if (!waitingForNewEpoch) {
                 return epoch;
@@ -1426,7 +1427,7 @@ public class Leader extends LearnerMaster {
             QuorumVerifier verifier = self.getQuorumVerifier();
             if (connectingFollowers.contains(self.getId()) && verifier.containsQuorum(connectingFollowers)) {
                 waitingForNewEpoch = false;
-                self.setAcceptedEpoch(epoch);
+                self.setAcceptedEpoch(epoch);                                                        // leader收到多数派的FOLLOWERINFO(CEPOCH)后设置自己的acceptedEpoch作为新的epoch
                 connectingFollowers.notifyAll();
             } else {
                 long start = Time.currentElapsedTime();
@@ -1464,7 +1465,7 @@ public class Leader extends LearnerMaster {
                 return;
             }
             if (ss.getCurrentEpoch() != -1) {
-                if (ss.isMoreRecentThan(leaderStateSummary)) {
+                if (ss.isMoreRecentThan(leaderStateSummary)) {                                        // 在Zab 1.0 中，more up-to-date than leader的情况是不允许的
                     throw new IOException("Follower is ahead of the leader, leader summary: "
                                           + leaderStateSummary.getCurrentEpoch()
                                           + " (current epoch), "
