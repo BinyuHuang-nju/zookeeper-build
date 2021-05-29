@@ -732,7 +732,7 @@ public class Learner {
                     self.setZooKeeperServer(zk);
                     self.adminServer.setZooKeeperServer(zk);
                     break outerLoop;                                                                                // 接收到UPTODATE(COMMIT-LD)就跳出循环进入BROADCAST
-                case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery
+                case Leader.NEWLEADER: // Getting NEWLEADER here instead of in discovery                           // 这注释是什么意思?
                     // means this is Zab 1.0
                     LOG.info("Learner received NEWLEADER message");
                     if (qp.getData() != null && qp.getData().length > 1) {
@@ -756,7 +756,7 @@ public class Learner {
 
                     // ZOOKEEPER-3911: make sure sync the uncommitted logs before commit them (ACK NEWLEADER).
                     sock.setSoTimeout(self.tickTime * self.syncLimit);
-                    self.setSyncMode(QuorumPeer.SyncMode.NONE);
+                    self.setSyncMode(QuorumPeer.SyncMode.NONE);                                       // 收到NEWLEADER后， syncMOde就置为NONE了，没有了之前的DIFF/TRUNC/SNAP模式
                     zk.startupWithoutServing();
                     if (zk instanceof FollowerZooKeeperServer) {
                         FollowerZooKeeperServer fzk = (FollowerZooKeeperServer) zk;
