@@ -727,7 +727,7 @@ public class Learner {
                     }
                     if (isPreZAB1_0) {
                         zk.takeSnapshot(syncSnapshot);
-                        self.setCurrentEpoch(newEpoch);
+                        self.setCurrentEpoch(newEpoch);                                                           // 收到UPTODATE(COMMIT-LD)时会再次置一次currentEpoch
                     }
                     self.setZooKeeperServer(zk);
                     self.adminServer.setZooKeeperServer(zk);
