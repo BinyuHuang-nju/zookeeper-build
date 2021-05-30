@@ -1410,7 +1410,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     boolean shuttingDownLE = false;
 
     @Override
-    public void run() {
+    public void run() {                                                       // 这里应该是所有server的主函数，在QuorumPeer.java中
         updateThreadName();
 
         LOG.debug("Starting quorum peer");
@@ -1537,8 +1537,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     try {
                         LOG.info("FOLLOWING");
                         setFollower(makeFollower(logFactory));
-                        follower.followLeader();
-                    } catch (Exception e) {
+                        follower.followLeader();                                  // 在这里可以看出，follower的主函数是followLeader(),
+                    } catch (Exception e) {                                       // followLeader()中有while(this.isRunning())来持续处理msg
                         LOG.warn("Unexpected exception", e);
                     } finally {
                         follower.shutdown();
@@ -1550,7 +1550,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                     LOG.info("LEADING");
                     try {
                         setLeader(makeLeader(logFactory));
-                        leader.lead();
+                        leader.lead();                                            // 在这里可以看出, leader的主函数是lead()
                         setLeader(null);
                     } catch (Exception e) {
                         LOG.warn("Unexpected exception", e);
