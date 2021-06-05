@@ -157,9 +157,9 @@ public class Follower extends Learner {                                         
      * @param qp
      * @throws IOException
      */
-    // follower在broadcast阶段处理msg的function。
-    // 由此可见,收到PROPOSAL, COMMIT是合理的，收到UPTODATE(COMMIT-LD)报错，
-    // 是否可以说，对于LEADERINFO(NEWEPOCH)和NEWLEADER这两种类型msg，follower在broadcast阶段是接收不到的？
+                                                                // follower在broadcast阶段处理msg的function。
+                                                                // 由此可见,收到PROPOSAL, COMMIT是合理的，收到UPTODATE(COMMIT-LD)报错，
+                                                                // 是否可以说，对于LEADERINFO(NEWEPOCH)和NEWLEADER这两种类型msg，follower在broadcast阶段是接收不到的？
     protected void processPacket(QuorumPacket qp) throws Exception {
         switch (qp.getType()) {
         case Leader.PING:
