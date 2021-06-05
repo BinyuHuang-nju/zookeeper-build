@@ -1140,9 +1140,9 @@ public class Leader extends LearnerMaster {
     void sendPacket(QuorumPacket qp) {                                                  // 这里就可以看到sendPacket是对forwardingFollowers做广播，而不是对所有servers，区别于Raft
         synchronized (forwardingFollowers) {
             for (LearnerHandler f : forwardingFollowers) {
-                f.queuePacket(qp);
-            }
-        }
+                f.queuePacket(qp);                                                      // Leader的sendPacket中会调用LearnerHandler.queuePacket
+            }                                                                           // 可以看出，leader对每个相连的follower用一个LearnerHandler控制，
+        }                                                                               // 真正与每个follower相连的是一个LearnerHandler的线程
     }
 
     /**
