@@ -326,10 +326,10 @@ public class LearnerHandler extends ZooKeeperThread {
      * @throws InterruptedException
      */
     private void sendPackets() throws InterruptedException {
-        while (true) {
+        while (true) {                                                                                // while(true)
             try {
-                QuorumPacket p;
-                p = queuedPackets.poll();
+                QuorumPacket p; 
+                p = queuedPackets.poll();                                                             // 每次从queuedPackets的队头取出该次处理的msg
                 if (p == null) {
                     bufferedOutput.flush();
                     p = queuedPackets.take();
@@ -363,7 +363,7 @@ public class LearnerHandler extends ZooKeeperThread {
 
                 // Log the zxid of the last request, if it is a valid zxid.
                 if (p.getZxid() > 0) {
-                    lastZxid = p.getZxid();
+                    lastZxid = p.getZxid();                                                               // lastZxid是该次msg
                 }
                 oa.writeRecord(p, "packet");
                 packetsSent.incrementAndGet();
@@ -459,7 +459,7 @@ public class LearnerHandler extends ZooKeeperThread {
      * also listen to new connections from new peers.
      */
     @Override
-    public void run() {
+    public void run() {                                                                                 // main function
         try {
             learnerMaster.addLearnerHandler(this);
             tickOfNextAckDeadline = learnerMaster.getTickOfInitialAckDeadline();
@@ -521,7 +521,7 @@ public class LearnerHandler extends ZooKeeperThread {
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
-            long newEpoch = learnerMaster.getEpochToPropose(this.getSid(), lastAcceptedEpoch);
+            long newEpoch = learnerMaster.getEpochToPropose(this.getSid(), lastAcceptedEpoch);               // 接收FOLLOWERINFO(CEPOCH)
             long newLeaderZxid = ZxidUtils.makeZxid(newEpoch, 0);
 
             if (this.getVersion() < 0x10000) {
@@ -551,7 +551,7 @@ public class LearnerHandler extends ZooKeeperThread {
             peerLastZxid = ss.getLastZxid();
 
             // Take any necessary action if we need to send TRUNC or DIFF
-            // startForwarding() will be called in all cases
+            // startForwarding() will be called in all cases                                          // startForwarding() will be called in all cases   
             boolean needSnap = syncFollower(peerLastZxid, learnerMaster);
 
             // syncs between followers and the leader are exempt from throttling because it
