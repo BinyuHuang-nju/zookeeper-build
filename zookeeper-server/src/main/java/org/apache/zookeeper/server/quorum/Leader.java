@@ -1304,8 +1304,8 @@ public class Leader extends LearnerMaster {
     }
 
     /**
-     * lets the leader know that a follower is capable of following and is done
-     * syncing
+     * lets the leader know that a follower is capable of following and is done                    // SYNC阶段的关键function
+     * syncing                                                                                     // 让leader知道某个follower结束了SYNC并可以开始broadcast
      *
      * @param handler handler of the follower
      * @return last proposed zxid
@@ -1319,15 +1319,15 @@ public class Leader extends LearnerMaster {
                 if (p.packet.getZxid() <= lastSeenZxid) {
                     continue;
                 }
-                handler.queuePacket(p.packet);
-                // Since the proposal has been committed we need to send the
-                // commit message also
-                QuorumPacket qp = new QuorumPacket(Leader.COMMIT, p.packet.getZxid(), null, null);
-                handler.queuePacket(qp);
+                handler.queuePacket(p.packet);                                                      // 对于该follower没见到但leader已经commit的消息，发送PROPOSAL
+                // Since the proposal has been committed we need to send the                        // 以及COMMIT，毕竟该msg已经被committed
+                // commit message also                                                              // toBeApplied可查看914 - TryToCommit，我们可以这样理解：
+                QuorumPacket qp = new QuorumPacket(Leader.COMMIT, p.packet.getZxid(), null, null);  // outstandingProposals: 未被committed的msgs
+                handler.queuePacket(qp);                                                            // toBeApplied: 已被commited的msgs
             }
             // Only participant need to get outstanding proposals
-            if (handler.getLearnerType() == LearnerType.PARTICIPANT) {
-                List<Long> zxids = new ArrayList<Long>(outstandingProposals.keySet());
+            if (handler.getLearnerType() == LearnerType.PARTICIPANT) {                              // 对于该follower没见到且leader还没commit的消息，仅发送PROPOSAL
+                List<Long> zxids = new ArrayList<Long>(outstandingProposals.keySet());              // 这里是不会发送COMMIT的
                 Collections.sort(zxids);
                 for (Long zxid : zxids) {
                     if (zxid <= lastSeenZxid) {
@@ -1337,8 +1337,8 @@ public class Leader extends LearnerMaster {
                 }
             }
         }
-        if (handler.getLearnerType() == LearnerType.PARTICIPANT) {
-            addForwardingFollower(handler);
+        if (handler.getLearnerType() == LearnerType.PARTICIPANT) {                                  // !!!!
+            addForwardingFollower(handler);                                                         // 在leader处理startForwarding时，会把对应follower加入Q!!
         } else {
             addObserverLearnerHandler(handler);
         }
@@ -1356,8 +1356,8 @@ public class Leader extends LearnerMaster {
     }
 
     // VisibleForTesting
-    protected final Set<Long> connectingFollowers = new HashSet<Long>();
-
+    protected final Set<Long> connectingFollowers = new HashSet<Long>();                           // 注意这里，leader有connectingFollowers和forwardingFollowers
+                                                                                                   // 很明显forwardingFollowers是前者的一个子集
     private volatile boolean quitWaitForEpoch = false;
     private volatile long timeStartWaitForEpoch = -1;
     private volatile SyncedLearnerTracker voteSet;
@@ -1421,8 +1421,8 @@ public class Leader extends LearnerMaster {
             if (lastAcceptedEpoch >= epoch) {
                 epoch = lastAcceptedEpoch + 1;
             }
-            if (isParticipant(sid)) {
-                connectingFollowers.add(sid);
+            if (isParticipant(sid)) {                                                                // !!!!
+                connectingFollowers.add(sid);                                                        // connectingFollowers是接收到CEPOCH的servers集合
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
             if (connectingFollowers.contains(self.getId()) && verifier.containsQuorum(connectingFollowers)) {
@@ -1572,7 +1572,7 @@ public class Leader extends LearnerMaster {
                 return;
             }
 
-            long currentZxid = newLeaderProposal.packet.getZxid();
+            long currentZxid = newLeaderProposal.packet.getZxid();                                   // 从这里可以看出，leader给所有followers发送的NEWLEADER含有相同的zxid=<e,0>
             if (zxid != currentZxid) {
                 LOG.error(
                     "NEWLEADER ACK from sid: {} is from a different epoch - current 0x{} received 0x{}",
