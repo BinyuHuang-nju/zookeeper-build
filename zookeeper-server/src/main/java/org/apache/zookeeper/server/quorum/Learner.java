@@ -512,7 +512,7 @@ public class Learner {
             if (newEpoch > self.getAcceptedEpoch()) {
                 wrappedEpochBytes.putInt((int) self.getCurrentEpoch());
                 self.setAcceptedEpoch(newEpoch);                                // 可以看到follower对LEADERINFO处理更新本地的acceptedEpoch
-            } else if (newEpoch == self.getAcceptedEpoch()) {
+            } else if (newEpoch == self.getAcceptedEpoch()) {                   // 当epoch = msg.epoch，依然会回复ACKEPOCH，区别是该ACK不计数
                 // since we have already acked an epoch equal to the leaders, we cannot ack
                 // again, but we still need to send our lastZxid to the leader so that we can
                 // sync with it if it does assume leadership of the epoch.
