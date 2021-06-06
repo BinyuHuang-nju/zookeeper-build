@@ -657,13 +657,13 @@ public class Leader extends LearnerMaster {
             // We have to get at least a majority of servers in sync with
             // us. We do this by waiting for the NEWLEADER packet to get
             // acknowledged                                                                                   // (广播LEADERINFO(NEWEPOCH)的过程)
-
+                                                                             // 发送LEADERINFO在各自的LearnerHandler都做了，这里下一行只需要将leader自己的ackepoch放入
             waitForEpochAck(self.getId(), leaderStateSummary);                                                // 1461 - 在这里等待接收多数派ACKECPOCH，其中判断up-to-date、epoch等信息
             self.setCurrentEpoch(epoch);                                                                      // 随后将currentEpoch也置为该轮的epoch
             self.setLeaderAddressAndId(self.getQuorumAddress(), self.getId());
             self.setZabState(QuorumPeer.ZabState.SYNCHRONIZATION);                                            // 将状态由DISCOVERY转为SYNCHRONIZATION
                                                                                                               // (广播(SYNC/TRUNC/DIFF)+NEWLEADER的过程)
-            try {
+            try {                                                          // 同理，发送NEWLEADER在各自的LearnerHandler都做了，这里下一行只需将leader自己的ackleader放入
                 waitForNewLeaderAck(self.getId(), zk.getZxid());                                              // 1566 - leader等待接收多数派的ACK-LD，其中判断zxid等信息
             } catch (InterruptedException e) {                                                                //        其中1590 - hasAllQuorums好像是接收到quorum中的每个follower
                 shutdown("Waiting for a quorum of followers, only synced with sids: [ "
