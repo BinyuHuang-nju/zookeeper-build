@@ -601,11 +601,11 @@ public class Leader extends LearnerMaster {
             // Start thread that waits for connection requests from
             // new followers.
             cnxAcceptor = new LearnerCnxAcceptor();
-            cnxAcceptor.start();
+            cnxAcceptor.start();                     
                                                                                      // 这里leader等待接收多数派的FOLLOWERINFO
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());   // 1415 - leader收到多数派的FOLLOWERINFO(CEPOCH)后设置自己的acceptedEpoch作为新的epoch
-
-            zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
+                                                          // 与下面的waitForEpochAck(self.getId(), leaderStateSummary);waitForNewLeaderAck(self.getId(), zk.getZxid());类似，
+            zk.setZxid(ZxidUtils.makeZxid(epoch, 0));     // 这里leader也需要将自己的FOLLOWERINFO信息放入
 
             synchronized (this) {
                 lastProposed = zk.getZxid();
