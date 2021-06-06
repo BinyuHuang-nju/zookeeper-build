@@ -88,7 +88,7 @@ public class Follower extends Learner {                                         
             try {
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
                 connectionTime = System.currentTimeMillis();
-                long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);
+                long newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO);                   // 在这里发FOLLOWERINFO，收LEADERINFO，发ACKEPOCH
                 if (self.isReconfigStateChange()) {
                     throw new Exception("learned about role change");
                 }
