@@ -501,7 +501,7 @@ public class Learner {
         boa.writeRecord(li, "LearnerInfo");
         qp.setData(bsid.toByteArray());
 
-        writePacket(qp, true);
+        writePacket(qp, true);                                                       // 这里pktType就是Leader.FOLLOWERINFO，在这里发送给leader了CEPOCH
         readPacket(qp);
         final long newEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
         if (qp.getType() == Leader.LEADERINFO) {
