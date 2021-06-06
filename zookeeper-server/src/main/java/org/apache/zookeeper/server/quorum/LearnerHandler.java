@@ -552,7 +552,7 @@ public class LearnerHandler extends ZooKeeperThread {
 
             // Take any necessary action if we need to send TRUNC or DIFF
             // startForwarding() will be called in all cases                                          // startForwarding() will be called in all cases   
-            boolean needSnap = syncFollower(peerLastZxid, learnerMaster);
+            boolean needSnap = syncFollower(peerLastZxid, learnerMaster);                             // startForwarding() 在syncFollower内最后被调用
 
             // syncs between followers and the leader are exempt from throttling because it
             // is important to keep the state of quorum servers up-to-date. The exempted syncs
@@ -596,7 +596,7 @@ public class LearnerHandler extends ZooKeeperThread {
             // the version of this quorumVerifier will be set by leader.lead() in case
             // the leader is just being established. waitForEpochAck makes sure that readyToStart is true if
             // we got here, so the version was set
-            if (getVersion() < 0x10000) {
+            if (getVersion() < 0x10000) {                                                       // 与follower同步完后，发送NEWLEADER
                 QuorumPacket newLeaderQP = new QuorumPacket(Leader.NEWLEADER, newLeaderZxid, null, null);
                 oa.writeRecord(newLeaderQP, "packet");
             } else {
@@ -617,7 +617,7 @@ public class LearnerHandler extends ZooKeeperThread {
             ia.readRecord(qp, "packet");
 
             messageTracker.trackReceived(qp.getType());
-            if (qp.getType() != Leader.ACK) {
+            if (qp.getType() != Leader.ACK) {                                                 // 等待接收ACK-NEWLEADER
                 LOG.error("Next packet was supposed to be an ACK, but received packet: {}", packetToString(qp));
                 return;
             }
@@ -627,7 +627,7 @@ public class LearnerHandler extends ZooKeeperThread {
             learnerMaster.waitForNewLeaderAck(getSid(), qp.getZxid());
 
             syncLimitCheck.start();
-            // sync ends when NEWLEADER-ACK is received
+            // sync ends when NEWLEADER-ACK is received                                        // sync ends when NEWLEADER-ACK is received
             syncThrottler.endSync();
             if (needSnap) {
                 ServerMetrics.getMetrics().INFLIGHT_SNAP_COUNT.add(syncThrottler.getSyncInProgress());
@@ -649,9 +649,9 @@ public class LearnerHandler extends ZooKeeperThread {
             // using the data
             //
             LOG.debug("Sending UPTODATE message to {}", sid);
-            queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
+            queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));                      // 接收到多数派的ACK后，发送UPTODATE
 
-            while (true) {
+            while (true) {                                                                             // 接下来就进入BROADCAST阶段
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");
                 messageTracker.trackReceived(qp.getType());
@@ -669,16 +669,16 @@ public class LearnerHandler extends ZooKeeperThread {
 
                 ByteBuffer bb;
                 long sessionId;
-                int cxid;
-                int type;
-
-                switch (qp.getType()) {
+                int cxid;                                                  //根据社区人员的回复和代码猜测：Leader主函数run()是对该leader的整体处理
+                int type;                                                  // 而LearnerHandler主函数run()是leader为处理某个follower而开的单一线程handler的处理
+                                                                           //故LearnerHandler主函数run()是对某个follower的处理，在sync后，理应只收到ACK,PING等
+                switch (qp.getType()) {                                                                  // leader接收消息
                 case Leader.ACK:
                     if (this.learnerType == LearnerType.OBSERVER) {
                         LOG.debug("Received ACK from Observer {}", this.sid);
                     }
                     syncLimitCheck.updateAck(qp.getZxid());
-                    learnerMaster.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());
+                    learnerMaster.processAck(this.sid, qp.getZxid(), sock.getLocalSocketAddress());       // ACK：调用Leader.java中的(999)processAck函数
                     break;
                 case Leader.PING:
                     // Process the touches
@@ -694,8 +694,8 @@ public class LearnerHandler extends ZooKeeperThread {
                     ServerMetrics.getMetrics().REVALIDATE_COUNT.add(1);
                     learnerMaster.revalidateSession(qp, this);
                     break;
-                case Leader.REQUEST:
-                    bb = ByteBuffer.wrap(qp.getData());
+                case Leader.REQUEST:                                                      // 看来follower也能接收ClientRequest并转发给leader处理
+                    bb = ByteBuffer.wrap(qp.getData());                                   // 我们的规约中假设所有Request都在Leader端处理
                     sessionId = bb.getLong();
                     cxid = bb.getInt();
                     type = bb.getInt();
@@ -921,7 +921,7 @@ public class LearnerHandler extends ZooKeeperThread {
             }
 
             LOG.debug("Start forwarding 0x{} for peer sid: {}", Long.toHexString(currentZxid), getSid());
-            leaderLastZxid = learnerMaster.startForwarding(this, currentZxid);
+            leaderLastZxid = learnerMaster.startForwarding(this, currentZxid);                     // startForwarding() 在syncFollower内最后被调用
         } finally {
             rl.unlock();
         }
