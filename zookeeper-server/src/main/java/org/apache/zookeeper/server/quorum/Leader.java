@@ -1237,7 +1237,7 @@ public class Leader extends LearnerMaster {
      * @param request
      * @return the proposal that is queued to send to all the members
      */
-    public Proposal propose(Request request) throws XidRolloverException {
+    public Proposal propose(Request request) throws XidRolloverException {                        // 发送PROPOSAL是向forwardingFollowers中的所有followers发送
         if (request.isThrottled()) {
             LOG.error("Throttled request send as proposal: {}. Exiting.", request);
             ServiceUtils.requestSystemExit(ExitCode.UNEXPECTED_ERROR.getValue());
@@ -1274,8 +1274,8 @@ public class Leader extends LearnerMaster {
             LOG.debug("Proposing:: {}", request);
 
             lastProposed = p.packet.getZxid();
-            outstandingProposals.put(lastProposed, p);
-            sendPacket(pp);
+            outstandingProposals.put(lastProposed, p);                                              // 将该proposal加入outstandingProposals
+            sendPacket(pp);                                                                         // 在sendPacket中向forwardingFollowers发送PROPOSAL
         }
         ServerMetrics.getMetrics().PROPOSAL_COUNT.add(1);
         return p;
