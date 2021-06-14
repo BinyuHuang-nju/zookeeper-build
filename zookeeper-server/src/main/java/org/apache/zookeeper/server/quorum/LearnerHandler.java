@@ -535,7 +535,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 ByteBuffer.wrap(ver).putInt(0x10000);
                 QuorumPacket newEpochPacket = new QuorumPacket(Leader.LEADERINFO, newLeaderZxid, ver, null);
                 oa.writeRecord(newEpochPacket, "packet");
-                messageTracker.trackSent(Leader.LEADERINFO);
+                messageTracker.trackSent(Leader.LEADERINFO);                                          // 给该follower发送LEADERINFO消息
                 bufferedOutput.flush();
                 QuorumPacket ackEpochPacket = new QuorumPacket();
                 ia.readRecord(ackEpochPacket, "packet");
@@ -546,7 +546,7 @@ public class LearnerHandler extends ZooKeeperThread {
                 }
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
                 ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
-                learnerMaster.waitForEpochAck(this.getSid(), ss);
+                learnerMaster.waitForEpochAck(this.getSid(), ss);                                     // 等待接收ACKEPOCH
             }
             peerLastZxid = ss.getLastZxid();
 
