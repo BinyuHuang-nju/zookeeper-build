@@ -920,19 +920,19 @@ public class Leader extends LearnerMaster {
         // pending all wait for a quorum of old and new config, so it's not possible to get enough acks
         // for an operation without getting enough acks for preceding ops. But in the future if multiple
         // concurrent reconfigs are allowed, this can happen.
-        if (outstandingProposals.containsKey(zxid - 1)) {
+        if (outstandingProposals.containsKey(zxid - 1)) {                                // 1. 只有之前所有的entry被commit了，该项才能被commit
             return false;
         }
 
         // in order to be committed, a proposal must be accepted by a quorum.
         //
         // getting a quorum from all necessary configurations.
-        if (!p.hasAllQuorums()) {
+        if (!p.hasAllQuorums()) {                                                       // 2. 只有当收到该entry的多数派的ack，才能试图对其commit
             return false;
         }
 
         // commit proposals in order
-        if (zxid != lastCommitted + 1) {
+        if (zxid != lastCommitted + 1) {                                               // 3. 同1，按序commit
             LOG.warn(
                 "Commiting zxid 0x{} from {} not first!",
                 Long.toHexString(zxid),
