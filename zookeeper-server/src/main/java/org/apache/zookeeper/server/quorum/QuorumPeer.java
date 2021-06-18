@@ -885,9 +885,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     }
 
-    private ServerState state = ServerState.LOOKING;
+    private ServerState state = ServerState.LOOKING;                                                        // 初始状态 state = LOOKING
 
-    private AtomicReference<ZabState> zabState = new AtomicReference<>(ZabState.ELECTION);
+    private AtomicReference<ZabState> zabState = new AtomicReference<>(ZabState.ELECTION);                  // 初始状态 zabState = ELECTION
     private AtomicReference<SyncMode> syncMode = new AtomicReference<>(SyncMode.NONE);
     private AtomicReference<String> leaderAddress = new AtomicReference<String>("");
     private AtomicLong leaderId = new AtomicLong(-1);
@@ -1125,11 +1125,11 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
 
     @Override
-    public synchronized void start() {
+    public synchronized void start() {                                                 // 启动/重启后首先流程进入集群前的流程
         if (!getView().containsKey(myid)) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
-        loadDataBase();
+        loadDataBase();                                                                // 加载一系列日志/数据等
         startServerCnxnFactory();
         try {
             adminServer.start();
@@ -1137,8 +1137,8 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             LOG.warn("Problem starting AdminServer", e);
             System.out.println(e);
         }
-        startLeaderElection();
-        startJvmPauseMonitor();
+        startLeaderElection();                                                         // 为自己创建一个Vote对象(id, currentEpoch, LOOKING等)，调用createElectionAlgorithm
+        startJvmPauseMonitor();                                                                             // 其中该election默认只允许使用FastLeaderElection
         super.start();
     }
 
@@ -1212,7 +1212,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     public synchronized void startLeaderElection() {
         try {
             if (getPeerState() == ServerState.LOOKING) {
-                currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
+                currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());    // Vote(long id, long zxid, long peerEpoch), state = LOOKING
             }
         } catch (IOException e) {
             RuntimeException re = new RuntimeException(e.getMessage());
@@ -1220,7 +1220,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             throw re;
         }
 
-        this.electionAlg = createElectionAlgorithm(electionType);
+        this.electionAlg = createElectionAlgorithm(electionType);                        // 调用election
     }
 
     private void startJvmPauseMonitor() {
@@ -1411,14 +1411,14 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     @Override
     public void run() {                                                       // 这里应该是所有server的主函数，在QuorumPeer.java中
-        updateThreadName();
-
-        LOG.debug("Starting quorum peer");
-        try {
-            jmxQuorumBean = new QuorumBean(this);
-            MBeanRegistry.getInstance().register(jmxQuorumBean, null);
-            for (QuorumServer s : getView().values()) {
-                ZKMBeanInfo p;
+        updateThreadName();                                                       // 若LOOKING，则进入LeaderElection;
+                                                                                  // 若LEADING, 则调用leader.lead() 即Leader类的主函数
+        LOG.debug("Starting quorum peer");                                        // 若FOLLOWING, 则调用follower.followLeader() 即Follower类的主函数
+        try {                                                                     // 经历一段时间遇到异常后，跳出函数，会紧接着调用updateServerState()
+            jmxQuorumBean = new QuorumBean(this);                                 // updateServerState逻辑: 1. reconfigFlag为false，则进入LOOKING，否则:
+            MBeanRegistry.getInstance().register(jmxQuorumBean, null);            //                      2. 看自己id与currentVote是否相同，相同则为LEADING则为FOLLOWING
+            for (QuorumServer s : getView().values()) {                           //                      3. 不同但是participant,则为FOLLOWING
+                ZKMBeanInfo p;                                                             // 所以这里我们规约时，默认进入LOOKING阶段更合理
                 if (getId() == s.id) {
                     p = jmxLocalPeerBean = new LocalPeerBean(this);
                     try {
@@ -1505,9 +1505,9 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                             reconfigFlagClear();
                             if (shuttingDownLE) {
                                 shuttingDownLE = false;
-                                startLeaderElection();
+                                startLeaderElection();                                    // 1. 进入LeaderElection阶段
                             }
-                            setCurrentVote(makeLEStrategy().lookForLeader());
+                            setCurrentVote(makeLEStrategy().lookForLeader());             // 2. 将自己的currentVote设置为找到的leader
                         } catch (Exception e) {
                             LOG.warn("Unexpected exception", e);
                             setPeerState(ServerState.LOOKING);
