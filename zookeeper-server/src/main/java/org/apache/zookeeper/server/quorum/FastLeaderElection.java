@@ -909,7 +909,7 @@ public class FastLeaderElection implements Election {
      * changes its state to LOOKING, this method is invoked, and it
      * sends notifications to all other peers.
      */
-    public Vote lookForLeader() throws InterruptedException {
+    public Vote lookForLeader() throws InterruptedException {                                         // 从Election类可以看出，lookForLeader是主函数
         try {
             self.jmxLeaderElectionBean = new LeaderElectionBean();
             MBeanRegistry.getInstance().register(self.jmxLeaderElectionBean, self.jmxLocalPeerBean);
@@ -925,7 +925,7 @@ public class FastLeaderElection implements Election {
              * if v.electionEpoch == logicalclock. The current participant uses recvset to deduce on whether a majority
              * of participants has voted for it.
              */
-            Map<Long, Vote> recvset = new HashMap<Long, Vote>();
+            Map<Long, Vote> recvset = new HashMap<Long, Vote>();                                        
 
             /*
              * The votes from previous leader elections, as well as the votes from the current leader election are
@@ -934,13 +934,13 @@ public class FastLeaderElection implements Election {
              * outofelection to learn which participant is the leader if it arrives late (i.e., higher logicalclock than
              * the electionEpoch of the received notifications) in a leader election.
              */
-            Map<Long, Vote> outofelection = new HashMap<Long, Vote>();
+            Map<Long, Vote> outofelection = new HashMap<Long, Vote>();                                 // ReceiveSet 和 OutOfElection 初始化
 
             int notTimeout = minNotificationInterval;
 
             synchronized (this) {
-                logicalclock.incrementAndGet();
-                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
+                logicalclock.incrementAndGet();                                                        // round开始时自增1
+                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());                  // 加载id, lastZxid, currentEpoch三个用于比较up-to-date的变量
             }
 
             LOG.info(
@@ -960,13 +960,13 @@ public class FastLeaderElection implements Election {
                  * Remove next notification from queue, times out after 2 times
                  * the termination time
                  */
-                Notification n = recvqueue.poll(notTimeout, TimeUnit.MILLISECONDS);
+                Notification n = recvqueue.poll(notTimeout, TimeUnit.MILLISECONDS);                    // 从等待队列中取出一个msg或因timeout给n赋值NULL
 
                 /*
                  * Sends more notifications if haven't received enough.
                  * Otherwise processes new notification.
                  */
-                if (n == null) {
+                if (n == null) {                                                                      // 超时，重新发送一轮notification                                                             
                     if (manager.haveDelivered()) {
                         sendNotifications();
                     } else {
@@ -976,7 +976,7 @@ public class FastLeaderElection implements Election {
                     /*
                      * Exponential backoff
                      */
-                    int tmpTimeOut = notTimeout * 2;
+                    int tmpTimeOut = notTimeout * 2;                                                 // 超时阈值采用二进制指数后退
                     notTimeout = Math.min(tmpTimeOut, maxNotificationInterval);
 
                     /*
