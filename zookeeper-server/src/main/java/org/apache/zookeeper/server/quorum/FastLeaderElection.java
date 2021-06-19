@@ -740,7 +740,7 @@ public class FastLeaderElection implements Election {
          *  as current zxid, but server id is higher.
          */
 
-        return ((newEpoch > curEpoch)
+        return ((newEpoch > curEpoch)                                                             // 比较逻辑 1.epoch 2. zxid 3. id
                 || ((newEpoch == curEpoch)
                     && ((newZxid > curZxid)
                         || ((newZxid == curZxid)
@@ -826,7 +826,7 @@ public class FastLeaderElection implements Election {
         proposedEpoch = epoch;
     }
 
-    public synchronized Vote getVote() {
+    public synchronized Vote getVote() {                                                       // 从updateProposal和getVote看出，vote主要包含proposedLeader的leader,zxid,epoch这三样信息
         return new Vote(proposedLeader, proposedZxid, proposedEpoch);
     }
 
