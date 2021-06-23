@@ -1002,8 +1002,8 @@ public class FastLeaderElection implements Election {
                      * voting view for a replica in the current or next voting view.
                      */
                     switch (n.state) {
-                    case LOOKING:
-                        if (getInitLastLoggedZxid() == -1) {
+                    case LOOKING:                                                                // 符合伪代码Line 11 n.state = election部分的逻辑
+                        if (getInitLastLoggedZxid() == -1) {                                     // 可以推测这里是从recvQueue中取出队头后进行的判断和处理
                             LOG.debug("Ignoring notification as our zxid is -1");
                             break;
                         }
@@ -1012,7 +1012,7 @@ public class FastLeaderElection implements Election {
                             break;
                         }
                         // If notification > current, replace and send messages out
-                        if (n.electionEpoch > logicalclock.get()) {
+                        if (n.electionEpoch > logicalclock.get()) {                                                            // Line 12
                             logicalclock.set(n.electionEpoch);
                             recvset.clear();
                             if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, getInitId(), getInitLastLoggedZxid(), getPeerEpoch())) {
@@ -1021,13 +1021,13 @@ public class FastLeaderElection implements Election {
                                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
                             }
                             sendNotifications();
-                        } else if (n.electionEpoch < logicalclock.get()) {
+                        } else if (n.electionEpoch < logicalclock.get()) {                                                    // Line 21
                                 LOG.debug(
                                     "Notification election epoch is smaller than logicalclock. n.electionEpoch = 0x{}, logicalclock=0x{}",
                                     Long.toHexString(n.electionEpoch),
                                     Long.toHexString(logicalclock.get()));
                             break;
-                        } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {
+                        } else if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {   // Line 18
                             updateProposal(n.leader, n.zxid, n.peerEpoch);
                             sendNotifications();
                         }
@@ -1040,14 +1040,14 @@ public class FastLeaderElection implements Election {
                             Long.toHexString(n.electionEpoch));
 
                         // don't care about the version if it's in LOOKING state
-                        recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));
+                        recvset.put(n.sid, new Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));                            // receiveVotes[self][n.sid] := new vote
 
                         voteSet = getVoteTracker(recvset, new Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch));
 
-                        if (voteSet.hasAllQuorums()) {
-
+                        if (voteSet.hasAllQuorums()) {                                                                          // 发现当前votedFor的server在本地receiveVotes中
+                                                                                                                                    // 获得多数派投票
                             // Verify if there is any change in the proposed leader
-                            while ((n = recvqueue.poll(finalizeWait, TimeUnit.MILLISECONDS)) != null) {
+                            while ((n = recvqueue.poll(finalizeWait, TimeUnit.MILLISECONDS)) != null) {                 // 这里是论文伪码中不存在的部分，当剩余msg中有更新的，如何处理
                                 if (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) {
                                     recvqueue.put(n);
                                     break;
@@ -1059,7 +1059,7 @@ public class FastLeaderElection implements Election {
                              * relevant message from the reception queue
                              */
                             if (n == null) {
-                                setPeerState(proposedLeader, voteSet);
+                                setPeerState(proposedLeader, voteSet);                                                            // 保存vote信息，更新state，退出
                                 Vote endVote = new Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch);
                                 leaveInstance(endVote);
                                 return endVote;
@@ -1099,7 +1099,7 @@ public class FastLeaderElection implements Election {
                         /*
                         * To avoid duplicate codes
                         * */
-                        Vote resultFN = receivedFollowingNotification(recvset, outofelection, voteSet, n);
+                        Vote resultFN = receivedFollowingNotification(recvset, outofelection, voteSet, n);                 //receivedFollowingNotification
                         if (resultFN == null) {
                             break;
                         } else {
@@ -1110,7 +1110,7 @@ public class FastLeaderElection implements Election {
                         * In leadingBehavior(), it performs followingBehvior() first. When followingBehavior() returns
                         * a null pointer, ask Oracle whether to follow this leader.
                         * */
-                        Vote resultLN = receivedLeadingNotification(recvset, outofelection, voteSet, n);
+                        Vote resultLN = receivedLeadingNotification(recvset, outofelection, voteSet, n);                  //receivedLeadingNotification
                         if (resultLN == null) {
                             break;
                         } else {
