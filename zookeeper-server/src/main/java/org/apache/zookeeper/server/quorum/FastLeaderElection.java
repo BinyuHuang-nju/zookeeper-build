@@ -405,15 +405,15 @@ public class FastLeaderElection implements Election {
                              * If this server is looking, then send proposed leader
                              */
 
-                            if (self.getPeerState() == QuorumPeer.ServerState.LOOKING) {
-                                recvqueue.offer(n);
+                            if (self.getPeerState() == QuorumPeer.ServerState.LOOKING) {                   // 这里最重要，对应Algorithm5，根据不同状态选择直接回复还是做进一步处理
+                                recvqueue.offer(n);                                                     // 将该msg加入recvqueue Line 4
 
                                 /*
                                  * Send a notification back if the peer that sent this
                                  * message is also looking and its logical clock is
                                  * lagging behind.
                                  */
-                                if ((ackstate == QuorumPeer.ServerState.LOOKING)
+                                if ((ackstate == QuorumPeer.ServerState.LOOKING)                       // 发送not Line 5
                                     && (n.electionEpoch < logicalclock.get())) {
                                     Vote v = getVote();
                                     QuorumVerifier qv = self.getQuorumVerifier();
@@ -462,7 +462,7 @@ public class FastLeaderElection implements Election {
                                         response.sid,
                                         current.getPeerEpoch(),
                                         qv.toString().getBytes());
-                                    sendqueue.offer(notmsg);
+                                    sendqueue.offer(notmsg);                                              // Line 8-9
                                 }
                             }
                         }
